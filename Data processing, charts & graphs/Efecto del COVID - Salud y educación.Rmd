@@ -1,0 +1,614 @@
+---
+title: "Trabajo grupal: Situación nacional a nivel demografía, hogar, salud, educación e ingresos en época de COVID"
+date: "17 de diciembre 2023"
+output:
+  rmdformats::robobook:
+    highlight: kate
+---
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(haven)
+library(ggplot2)
+library(openxlsx)
+library(Hmisc)
+library(gtsummary)
+library(tidyr)
+library(lubridate)
+library(gganimate)
+```
+
+
+# Efecto COVID en el Perú (2020 y 2021)
+
+Integrantes y trabajo realizador:
+
+*1.. Eduardo Alarcón Gutierrez*
+
+*2. Auri Morro Muñoz*
+
+*3. Emmanuel Diaz Gonzales*
+
+*4. Fernando Alonso Sánchez Prieto*
+
+## 1. Introducción
+El objetivo del presente reporte es poder analizar las condiciones socioeconómicas que atrevesó Perú durante la llegada del COVID-19 en el 2020, así como caracterizar la condición del país post-pandemia, con programas de vacunación implementado por el Gobierno, el cual tuvo inicio en febrero del 2021.
+
+Para el presente análisis se empleará información de la Encuesta Nacional de Hogares (ENAHO) de los años 2020 y 2021, para analizar la situación COVID y Post-COVID del país.
+
+## 1.1 Efecto COVID en el Perú
+En el Perú, al igual que el resto de paises de la región y buena parte del mundo, el COVID-19 desató una de las peores crisis ha atravesado en su historia contemporánea. Donde, como resultado de una superposición de shocks adversos que tiene pocos precedentes, en 2020 se produjo una contracción del producto interno bruto (PIB) de dos dígitos, la destrucción de millones de empleos formales e informales, y un repunte de la pobreza, que revirtió parte de las ganancias de dos décadas de progreso social sostenido.
+
+## 1.2 Aspectos de análisis
+Bajo los aspectos económicos, calcularemos el nivel de ingresos mensuales promedio a nivel nacional en los años 2020 y 2021, así como el detalle de ingresos a nivel de departamentos, para analizar ver la variación luego de la etapa COVID que atresó el país. Además, caracterizaremos información a nivel de indicadores de salud, como accesso a servicios de salud y población que experimentó sintomas COVID durante el 2020 y tras la llegada de los primeros lotes de vacuna en el año 2021.
+
+En cuanto a las condiciones económicas la pandemia de COVID-19 provocó cierres de negocios y restricciones a nivel mundial, afectando diversos sectores económicos. Además, trajo consigo la adopción del trabajo remoto, el cual se acelero especialmente en industrias que pudieron adaptarse a esta modalidad.Cabe resaltar que, algunos sectores, como la hostelería y el turismo, sufrieron pérdidas significativas de empleo, siendo los más afectado durante el confinamiento.
+
+En cuanto a la educación, la pandemia de COVID-19 ha impactado profundamente la matrícula escolar y la educación superior en Perú. Las restricciones de movilidad y el cambio a la educación virtual han planteado desafíos significativos. La brecha digital y la falta de recursos han afectado a los estudiantes más vulnerables. Además, la crisis económica ha llevado a muchos a abandonar sus estudios para buscar empleo. Estos factores podrían tener implicaciones duraderas para el futuro educativo de Perú, por lo que es importante analizar la evolución de la matrícula escolar y superior entre 2016-2022? y cómo el confinamiento por la pandemia COVID-19 ha afectado esta evolución.
+
+
+## 2. Descripción de la base de datos y variables
+
+### 2.1 Metodología
+Como parte de la metodología empleada por el INEI para caracterizar las condiciones nacionales en factores como demografía, salud, educación, empleos e ingresos, la institución aplica encuestas a hogares a partir de una muestra estadísticamente representativa, calculada a nivel de conglomerados por distrito, con la finalidad de recoger información que caracterice las mayores condiciones posibles de la población nacional.
+
+Es importante recalcar que, al ser una base de datos construida con población parcial, los resultados presentados corresponderán a niveles porcentuales y cálculo de media, para caracterizar las condiciones nacionales.
+
+### 2.2 Base de datos y variables
+Para el presente análisis de los años 2020 y 2021, se utilizarán las siguientes bases de datos:
+Enaho01-100    : Características de la Vivienda y del hogar
+Enaho01-200    : Características de los miembros del hogar
+Enaho01A-300   : Educación
+Enaho01A-400   : Salud
+Enaho01A-500   : Empleo e Ingresos - Para personas de 14 años y más edad
+
+*Enaho01-100 y Enaho01-200:Caracteristicas de la vivienda, hogar y miembros*
+La base de datos de la ENAHO a nivel de vivienda y hogar, permite conocer la cantidad de viviendas visitadas y el número de hogares encuestados, así como sus características. A partir de esta información se caracterizan los miembros del hogar y sus respectivas condiciones.
+
+```{r message=FALSE, warning=FALSE}
+Vivienda_Hogar <-read_spss("Enaho01-2020-100.sav")
+Miembros_Hogar <-read_spss("Enaho01-2020-200.sav")
+dim(Vivienda_Hogar)
+dim(Miembros_Hogar)
+```
+Sobre la "data_ENAHO_20_100", esta contiene 53 423 observaciones y 331 variables. En la información revisada de la base de datos, se pueden ver variables como, la ubicación de la vivienda (Costa Norte, Costa Centro o Sur, ó en la Sierra Norte, Centro, Sur, Selva y Lima), condiciones de materiales de la vivienda y servicios con que cuenta.
+
+En cuanto a la "data_ENAHO_20_200", es una información que contiene 126 831 observaciones y 45 variables. Esta base de datos, permite conocer quién es el jefe del hogar de cada encuesta aplicada, cuál es la relación de parentesco con él o ella, además permite conocer la edad de los miembros del hogar, cuantas personas conforman el hogar, etc. 
+
+*Enaho01-400 : Educación*
+El Instituto Nacional de Estadística e Informática (INEI) publica anualmente la Encuesta Nacional de Hogares (ENAHO). Para nuestro análisis, consideraremos dos módulos de esta encuesta: i) el módulo de educación, que proporciona información sobre la escolarización para individuos de 3 años en adelante, y ii) el módulo de características del miembro del hogar entrevistado, que nos permitirá extraer variables como la edad, el sexo, entre otras.
+
+```{r message=FALSE, warning=FALSE}
+df_2016_edu <- read_csv("edu_2016.csv", locale = locale(encoding = "latin1"))
+df_2017_edu <- read_csv("edu_2017.csv", locale = locale(encoding = "latin1"))
+df_2018_edu <- read_csv("edu_2018.csv", locale = locale(encoding = "latin1"))
+df_2019_edu <- read_csv("edu_2019.csv", locale = locale(encoding = "latin1"))
+df_2020_edu <- read_csv("edu_2020.csv", locale = locale(encoding = "latin1"))
+df_2021_edu <- read_csv("edu_2021.csv", locale = locale(encoding = "latin1"))
+df_2022_edu <- read_csv("edu_2022.csv", locale = locale(encoding = "latin1"))
+df_2016_ind <- read_csv("ind_2016.csv", locale = locale(encoding = "latin1"))
+df_2017_ind <- read_csv("ind_2017.csv", locale = locale(encoding = "latin1"))
+df_2018_ind <- read_csv("ind_2018.csv", locale = locale(encoding = "latin1"))
+df_2019_ind <- read_csv("ind_2019.csv", locale = locale(encoding = "latin1"))
+df_2020_ind <- read_csv("ind_2020.csv", locale = locale(encoding = "latin1"))
+df_2021_ind <- read_csv("ind_2021.csv", locale = locale(encoding = "latin1"))
+df_2022_ind <- read_csv("ind_2022.csv", locale = locale(encoding = "latin1"))
+```
+En el modulo de educación extraemos mediante la función `select()` variables útiles para el análisis y *mergeado* de las bases de datos de interés. En ese sentido, es necesario señalar a tres variables claves que serán la piedra angular de esta exposición:
+
+- P207: variable dicotomica que nos indica el ¨**sexo del miembro del hogar**.
+
+- P208A: nos indica la **edad en años** del mimebro del hogar.
+
+- P306: proviene de la pregunta **Este año, ¿Está Matrículado en algún centro o programa de educación básica o superior?**
+
+- FACTOR07: es el **factor de expansión o peso poblacional** que nos permite estimar, a través del muestreo de la encuesta, los resultados potenciales a nivel poblacional en el contexto del análisis de interés.
+```{r message=FALSE, warning=FALSE}
+df_2016_edu_1<-select(df_2016_edu,AÑO:CODINFOR,P306, FACTOR07)
+df_2017_edu_1<-select(df_2017_edu,AÑO:CODINFOR,P306, FACTOR07)
+df_2018_edu_1<-select(df_2018_edu,AÑO:CODINFOR,P306, FACTOR07)
+df_2019_edu_1<-select(df_2019_edu,AÑO:CODINFOR,P306, FACTOR07)
+df_2020_edu_1<-select(df_2020_edu,AÑO:CODINFOR,P306, FACTOR07)
+df_2021_edu_1<-select(df_2021_edu,AÑO:CODINFOR,P306, FACTOR07)
+df_2022_edu_1<-select(df_2022_edu,AÑO:CODINFOR,P306, FACTOR07)
+
+#Módulo de caracteristicas del individuo
+
+df_2016_ind_1<-df_2016_ind |> 
+              select(AÑO:CODPERSO,P207,P208A) 
+df_2017_ind_1<-df_2017_ind |> 
+              select(AÑO:CODPERSO,P207,P208A) 
+df_2018_ind_1<-df_2018_ind |> 
+              select(AÑO:ESTRATO,P207,P208A) 
+df_2019_ind_1<-df_2019_ind |> 
+              select(AÑO:ESTRATO,P207,P208A) 
+df_2020_ind_1<-df_2020_ind |> 
+              select(AÑO:ESTRATO,P207,P208A) 
+df_2021_ind_1<-df_2021_ind |> 
+              select(AÑO:ESTRATO,P207,P208A)
+df_2022_ind_1<-df_2022_ind |> 
+              select(AÑO:ESTRATO,P207,P208A)
+
+rm (df_2016_edu, df_2016_ind, df_2017_edu, df_2017_ind, df_2018_edu, df_2018_ind, df_2019_edu, df_2019_ind, df_2020_edu, df_2020_ind, df_2021_edu, df_2021_ind, df_2022_edu, df_2022_ind)
+```
+
+
+*Enaho01-400 : Salud*
+La base de datos de la ENAHO a nivel de salud de los años 2020 y 2021, nos permitirá conocer la cantidad de personas (porcentualmente) que cuentan con acceso a servicios de salud, casos de morbilidad y atención por COVID-19 recibida.
+
+```{r message=FALSE, warning=FALSE}
+Salud_2020 <-read_spss("Enaho01A-2020-400.sav")
+Salud_2021 <-read_spss("Enaho01A-2021-400.sav")
+dim(Salud_2020)
+dim(Salud_2021)
+```
+Sobre la "Enaho01A-2020-400" la cual ha sido importada con nombre *Salud_2020*, se observa que esta contiene 120 346 observaciones y 1 052 variables. Mientras que, la "data_ENAHO_20_200" nombrada como *Salud_2021*, contiene 114 239 observaciones y 984 variables.
+
+```{r message=FALSE, warning=FALSE}
+Salud_2020 |>
+  select(AÑO, P4191, P4192, P4193, P4194, P4195, P4196, P4197, P4198, P4026, P40314) |>
+  glimpse()
+```
+Como parte del análisis de las condiciones de salud, realizaremos el análisis de las variables como la población que cuenta con seguro por tipo (P4191 - P4198), persona que tuvo sintomas COVID (P4026) y personas que reciberon atención médica (P40314)
+
+*Sumaria-12g: Sumaria (Variables calculadas)*
+La base de datos de sumaria es donde se presenta la consolidación y análisis de los datos recolectados durante las encuestas, donde se consolida la información de ingresos y otros indicadores relevantes para el análisis económico y social del país. 
+```{r message=FALSE, warning=FALSE}
+#Importamos las bases de datos usada
+Ingresos_ENAHO_2020 <-read_spss("Sumaria-2020-12g.sav")
+Ingresos_ENAHO_2021 <-read_spss("Sumaria-2021-12g.sav")
+dim(Ingresos_ENAHO_2020)
+dim(Ingresos_ENAHO_2021)
+```
+Se puede observa que, la base de datos del año 2020, presenta 252 variables y 34 490 observaciones, mientras que, la del año 2021 presenta 266 variables y 34 245 observaciones (diferencias por etapa COVID y muestra calculada). Para el presente análisis tomaremos las variables de ingreso dependiente e independiente para poder caracterizar los niveles de ingreso nacional y departamental, para los años 2020 y 2021.
+
+```{r message=FALSE, warning=FALSE}
+Ingresos_ENAHO_2020 |>
+  select(INGNETHD, INGINDHD, INSEDLHD, INGSEIHD) |>
+  glimpse()
+```
+Estas variables son de tipo double y poseen cada una 34 490 observaciones, donde en el cuadro previo se observa el ingreso dependiente por actividad principal (INGNETHD) y secundaria (INSEDLHD), así como el ingreso independiente también por actividad principal (INGINDHD) y secundaria (INGSEIHD).
+
+
+## 3. Prepocesamiento
+Para el preprocesamiento iniciamos con la base de datos de la ENAHO, la cual ha sido importada desde el archivo SAV proporcionado por el INEI, donde se tienen los datos por distrito (ubgieo). Luego, a partir del registro de UBIGEOS del INEI, juntamos la información del nombre de departamento, provincia y distrito, con el objetivo de tener datos departmentales.
+
+*Enaho01-100 y Enaho01-200:Caracteristicas de la vivienda, hogar y miembros*
+```{r}
+#Importar tabla geodir-ubigeo-inei.xlsx, de nombres de departamentos y ubigeo
+geodir_ubigeo <- read.xlsx("geodir-ubigeo-inei.xlsx", sheet = 1)
+Miembros_Hogar <- left_join(Miembros_Hogar, geodir_ubigeo, by = c("UBIGEO" = "Ubigeo")) 
+```
+
+```{r}
+#Usamos la Tabla geodir_ubigeo para indicar las variables mediante el Departamento
+Vivienda_Hogar <- left_join(Vivienda_Hogar, geodir_ubigeo, by = c("UBIGEO" = "Ubigeo"))
+```
+Para el presente análisis creamos los data frame *Miembros_Hogar* y *Vivienda_Hogar* el cual condensa información de las características de miembros del hogar y vivienda del 2020, respectivamente. Para lo cual se usaron funciones como left_join, para juntar los datos de los departamento por Ubigeo por distrito.
+
+*Enaho01A-300: Educación*
+Mediante la función merge() uno el módulo de características del miembro del hogar con el de educación mediaten las variables reportadas en el código de a continuación. Es importante destacar que, mediante este mecanismo, estoy uniendo observación por observación lo que permite tener datos a nivel de individuo.
+
+Nota: la variable NCONGLOME ha quedado desfasada desde el la ENAHO 2020
+
+```{r message=FALSE, warning=FALSE}
+df_2016<-merge(df_2016_edu_1,df_2016_ind_1, by = c("AÑO", "MES", "NCONGLOME", "CONGLOME", "VIVIENDA", 
+                                                   "HOGAR", "CODPERSO", "UBIGEO", "DOMINIO", "ESTRATO"))
+
+df_2016<-select(df_2016,-NCONGLOME)
+
+df_2017<-merge(df_2017_edu_1,df_2017_ind_1, by = c("AÑO", "MES", "NCONGLOME", "CONGLOME", "VIVIENDA", 
+                                                   "HOGAR", "CODPERSO", "UBIGEO", "DOMINIO", "ESTRATO"))
+
+df_2017<-select(df_2017,-NCONGLOME)
+
+df_2018<-merge(df_2018_edu_1,df_2018_ind_1, by = c("AÑO", "MES", "NCONGLOME", "CONGLOME", "VIVIENDA", 
+                                                   "HOGAR", "CODPERSO", "UBIGEO", "DOMINIO", "ESTRATO"))
+
+df_2018<-select(df_2018,-NCONGLOME)
+
+df_2019<-merge(df_2019_edu_1,df_2019_ind_1, by = c("AÑO", "MES", "NCONGLOME", "CONGLOME", "VIVIENDA", 
+                                                   "HOGAR", "CODPERSO", "UBIGEO", "DOMINIO", "ESTRATO"))
+
+df_2019<-select(df_2019,-NCONGLOME)
+
+df_2020<-merge(df_2020_edu_1,df_2020_ind_1, by = c("AÑO", "MES", "CONGLOME", "VIVIENDA", 
+                                                   "HOGAR", "CODPERSO", "UBIGEO", "DOMINIO", "ESTRATO"))
+df_2021<-merge(df_2021_edu_1,df_2021_ind_1, by = c("AÑO", "MES", "CONGLOME", "VIVIENDA", 
+                                                   "HOGAR", "CODPERSO", "UBIGEO", "DOMINIO", "ESTRATO"))
+df_2022<-merge(df_2022_edu_1,df_2022_ind_1, by = c("AÑO", "MES", "CONGLOME", "VIVIENDA", 
+                                                   "HOGAR", "CODPERSO", "UBIGEO", "DOMINIO", "ESTRATO"))
+```
+Posteriormente hago un append, para que la función rbind()` permita realizar este tipo de ejercicio necesita que todos los data.frame tengan las mismas variables, es por ello que extraigo NCONGLOME de mis datasets.
+
+```{r message=FALSE, warning=FALSE}
+df_edu<-rbind(df_2016,df_2017,df_2018,df_2019, df_2020, df_2021, df_2022)
+```
+
+*Enaho01A-400: Salud*
+```{r message=FALSE, warning=FALSE}
+library(readxl)
+dataf<-read_xlsx("geodir-ubigeo-inei.xlsx")
+
+# Extraer las dos primeras letras y crear una nueva columna con el ubigeo por departamento
+dataf$ubigeo <- substr(dataf$Ubigeo, 1, 2)
+
+library(dplyr)
+
+Ubigeo <- dataf |>   # Data
+  select(ubigeo, Departamento) |>
+  count(ubigeo, Departamento, sort = TRUE)
+Ubigeo <- subset(Ubigeo, select = -n)
+Ubigeo <- Ubigeo %>% arrange(ubigeo)
+```
+
+```{r message=FALSE, warning=FALSE}
+Salud_2021 <- subset(Salud_2021, select = c("P4191", "P4192", "P4193", "P4194", "P4195", "P4196", "P4197", "P4198", "P4026", "P40314", "UBIGEO", "AÑO"))
+
+Salud_2020 <- subset(Salud_2020, select = c("P4191", "P4192", "P4193", "P4194", "P4195", "P4196", "P4197", "P4198", "P4026", "P40314", "UBIGEO", "AÑO"))
+
+#Realizamos la concatenación de las bases de datos 2020 y 2021
+Salud <- rbind(Salud_2020, Salud_2021)
+
+#Generamos el ubigeo departamental y hacemos el merge con la base de datos de ubigeo excell
+Salud$ubigeo <- substr(Salud$UBIGEO, 1, 2)
+Salud_Total <- inner_join(Salud, Ubigeo, by = "ubigeo")
+
+#Eliminar la base de datos que ya no van a usar
+#rm(Salud_2020, Salud_2021, Salud)
+```
+Para el presente análisis creamos el data frame *Salud_total* el cual condensa información de las condiciones de salud, como tenencia de seguro, padecimiento de COVID y atención médica, para lo cual se usaron funciones como rbind, para juntar ambas bases de datos de cada año y inner_join, para juntar los datos de los departamento por Ubigeo por departamento (previamente se utilizó la función substr, para extraer los dos primeros dígitos del ubigeo).
+
+*Sumaria-12g: Sumaria (Variables calculadas)*
+Trabajeremos la data de Sumaria para anexar la data de los dos años en uno solo documento y agregar el nombre de departamentos por ubigeo:
+```{r message=FALSE, warning=FALSE}
+#TRABAJAMOS CON LA BASE DE DATOS DE SUMARIA DE LA ENAHO:
+##Eliminamos las variables excedentes de la base de datos uno y dos
+columnas_excedentes <- setdiff(names(Ingresos_ENAHO_2020), names(Ingresos_ENAHO_2021))
+Ingresos_ENAHO_2020 <- Ingresos_ENAHO_2020[, !names(Ingresos_ENAHO_2020) %in% columnas_excedentes]
+
+columnas_excedentes <- setdiff(names(Ingresos_ENAHO_2021), names(Ingresos_ENAHO_2020))
+Ingresos_ENAHO_2021 <- Ingresos_ENAHO_2021[, !names(Ingresos_ENAHO_2021) %in% columnas_excedentes]
+
+#Realizamos la contatenación de las bases de datos 2020 y 2021
+Ingresos <- rbind(Ingresos_ENAHO_2020, Ingresos_ENAHO_2021)
+
+#Generamos el ubigeo departamental y hacemos el merge con la base de datos de ubigeo excell
+Ingresos$ubigeo <- substr(Ingresos$UBIGEO, 1, 2)
+Ingresos_Total <- inner_join(Ingresos, Ubigeo, by = "ubigeo")
+
+#Eliminar la base de datos que ya no van a usar
+rm(Ingresos, Ingresos_2020, Ingresos_ENAHO_2020, Ingresos_ENAHO_2021)
+
+#Mantener las variables que van a usar para la descripción
+Ingresos_2020_2021 <- subset(Ingresos_Total, select = c("INGNETHD", "INGINDHD", "INSEDLHD", "INGSEIHD", "ubigeo", "Departamento", "AÑO"))
+```
+
+Para el presente análisis creamos el data frame *Ingresos_2020_2021* el cual condensa información de los ingresos dependientes e independiente de los años 2020 y 2021, para lo cual se usaron funciones como rbind, para juntar ambas bases de datos de sumaria y inner_join, para juntar los datos de los departamento por Ubigeo por departamento.
+
+
+## 4. Análisis descriptivo
+
+### 4.1. Descripción de aspecto de la salud
+
+#### Tenencia de seguro a nivel nacional
+Generamos la variable que nos exprese la tenencia o no de seguros de salud por parte de la población, con ayuda de la función mutate:
+
+```{r message=FALSE, warning=FALSE}
+Salud_mod <- Salud_Total %>%
+  mutate(Seguro = ifelse(is.na(P4191), NA, ifelse(P4191 == 1, 1, 0)))
+
+Salud_mod$Seguro[Salud_mod$P4192 == 1] <- 1
+Salud_mod$Seguro[Salud_mod$P4193 == 1] <- 1
+Salud_mod$Seguro[Salud_mod$P4194 == 1] <- 1
+Salud_mod$Seguro[Salud_mod$P4195 == 1] <- 1
+Salud_mod$Seguro[Salud_mod$P4196 == 1] <- 1
+Salud_mod$Seguro[Salud_mod$P4197 == 1] <- 1
+Salud_mod$Seguro[Salud_mod$P4198 == 1] <- 1
+
+```
+
+Analizamos la tenencia de seguro en el año 2020:
+
+```{r}
+Salud<-Salud_mod  |>  # Selecciono estas columnas 
+    mutate(Tenencia_seguro =
+        case_when(Seguro==1~"Sí",
+                  Seguro==0~"No", 
+                  TRUE~"No_Sabe"))
+label(Salud$Tenencia_seguro)="Cuenta con seguro de salud"
+
+Salud |> 
+  filter(AÑO == 2020) |> 
+  select(Tenencia_seguro) |>
+  tbl_summary(statistic = list(all_continuous() ~ "{mean} ({sd})")) |> 
+  modify_header(label = "**Servicios de salud**") |> 
+  modify_caption("**Tabla resumen**") 
+
+```
+Analizamos la tenencia de seguro en el año 2021:
+```{r}
+Salud |> 
+  filter(AÑO == 2021) |> 
+  select(Tenencia_seguro) |>
+  tbl_summary(statistic = list(all_continuous() ~ "{mean} ({sd})")) |> 
+  modify_header(label = "**Servicios de salud**") |> 
+  modify_caption("**Tabla resumen**") 
+
+```
+Se puede observar que, a nivel nacional aproximadamente el 80% de la población contaba con seguro de salud en el año 2020, mientras que, en el año 2021 este porcentaje aumentó al 83%. Lo cual iría con la política emitida por el estado en cuanto a la salud pública, donde tiene como obligación garantizar la cobertura del servicio de salud (SIS) para la población.
+
+#### Tenencia de seguro a nivel departamental
+Analizamos la tenencia de seguros a nivel departamental en los años 2020 y 2021:
+```{r}
+Salud_dep <- Salud |>
+  count(Departamento, AÑO, Tenencia_seguro) |>
+  arrange(desc(n))
+
+#Generamos un reporte salud a nivel de departamentos
+Salud_dep_año <- Salud_dep |>
+  pivot_wider(names_from = Tenencia_seguro, values_from = n) |>
+  mutate(Total = Sí + No) |>
+  mutate(Seguro = Sí/Total*100)
+
+Salud_dep_año2 <- Salud_dep_año |>
+  select(-Sí, -No, -No_Sabe, -Total) |>
+  pivot_wider(names_from = AÑO, values_from = Seguro, names_prefix = "Seguro_")
+
+Salud_dep_año2 <- Salud_dep_año2 |>
+  mutate(No_Seguro_2021 = 100 - Seguro_2021) |>
+  mutate(No_Seguro_2020 = 100 - Seguro_2020)
+Salud_dep_año2
+```
+```{r message=FALSE, warning=FALSE}
+#Finalmente creamos la base de datos donde tenemos la tenencia de seguro por año
+Salud_dep_año |>
+  ggplot() +
+  aes(x = Seguro, y = Departamento) +
+  geom_bar(aes(fill = factor(AÑO)), stat = "identity", position = "dodge", width = 0.7) +
+  labs(x = "Tenencia de seguro", y = "Departamento", title = "Tenencia de seguros en el año 2020-2021") +
+  scale_fill_discrete(name = "AÑO", labels = c("2020", "2021"), breaks = c(2020, 2021)) +
+  theme_minimal()
+```
+Se puede observar que, tanto en el gráfico como en el cuadro resumen, si bien la tenencia de seguro ha aumentado del año 2021 respecto al año 2020, aún no se llega a tener más del 95% de la población asegurada. Cabe resaltar que, el departamento que tiene menor proporción de asegurados al 2021, es Ica con el 73,65% de su población.
+
+#### Casos de sintomas de COVID-19 a nivel nacional
+Realizamos en análisis de los casos donde la población ha tenido la sospecha de tener o haber padecido de COVID-19, para el años 2020:
+
+```{r}
+Salud_covid<-Salud_Total  |>  # Selecciono estas columnas 
+    mutate(COVID =
+        case_when(P4026==1~"Sí",
+                  P4026==0~"No", 
+                  TRUE~"No_Sabe"))
+label(Salud_covid$COVID)="Tuvo sintomas de covid en el último mes"
+
+Salud_covid |> 
+  filter(AÑO == 2020) |> 
+  select(COVID) |>
+  tbl_summary(statistic = list(all_continuous() ~ "{mean} ({sd})")) |> 
+  modify_header(label = "**Casos de morbilidad**") |> 
+  modify_caption("**Tabla resumen**") 
+
+```
+Analizamos ahora la tendencia para el año 2021:
+```{r}
+Salud_covid |> 
+  filter(AÑO == 2021) |> 
+  select(COVID) |>
+  tbl_summary(statistic = list(all_continuous() ~ "{mean} ({sd})")) |> 
+  modify_header(label = "**Casos de morbilidad**") |> 
+  modify_caption("**Tabla resumen**") 
+```
+Como se puede evidenciar previamente en los cuadros presentados, la población del año 2020 al 2021, aún no presentaba mucha variación en cuanto a los "casos de COVID" (población que había tenido sintomas relacionados al COVID). Lo cual se puede explicar por la llegada de las primeras dosis y la demora en que este servicio llegara a la mayor parte de la población.
+
+### 4.2. Descripción de aspecto de la educación
+
+### Establezcemos muestra en función de la edad normativa
+La ENAHO no nos otorga una clasificación de estadios educacionales de los individuos, realizamos ello mediante el uso del pipe para concatenar funciones y la funcion case_when(). Importante destacar que previamente filtramos el dataset tomando en cuenta dos criterios: (i) nos quedamos solamente con aquellos alumnos matriculados en el nivel escolar o superior (P306==1); y, (ii) aquellos individuos de entre 3 a 23 años.
+
+```{r message=FALSE, warning=FALSE}
+df_edu_mod<- df_edu |>
+  filter(P306==1, P208A>=3 & P208A<=23) |> 
+  mutate(Etapa=
+          case_when(P208A<6 ~ "Inicial",
+                    P208A<12 ~ "Primaria",
+                    P208A<18 ~ "Secundaria",
+                    TRUE ~ "Superior")) |> 
+  mutate (Area=
+          case_when(ESTRATO<6 ~ "Urbano",
+                    TRUE ~ "Rural")) |> 
+  mutate (Sexo=
+          case_when(P207==1 ~ "Hombre",
+                    TRUE ~ "Mujer"))  
+```
+
+Categorizamos las variables de interés mediante la función case_when(), esto nos ayudará a la realización efectiva de los gráficos a presentar.
+```{r message=FALSE, warning=FALSE}
+df_edu_mod$Etapa<-factor(df_edu_mod$Etapa, 
+                                       levels = c("Inicial", "Primaria", "Secundaria", "Superior"), ordered = T)
+df_edu_mod$Area<-factor(df_edu_mod$Area, 
+                                       levels = c("Urbano","Rural"), ordered = T)
+df_edu_mod$Sexo<-factor(df_edu_mod$Sexo, 
+                                       levels = c("Hombre","Mujer"), ordered = T)
+```
+
+#### Evolución de la matricula escolar y superior
+Vemos una evolución un tanto peculiar de la matricula para los individuos de entre3 a 23 años, sin emnbargo esto puede esconder dinamicas que pueden darse, por ejemplo, por sexo y/o ámbito de residencia.
+```{r}
+df_edu_mod |> 
+  count(AÑO, wt=FACTOR07) |>  
+    ggplot()+
+    aes(x=AÑO, y=n)+
+     stat_summary(fun="mean",geom="line") +
+     scale_x_continuous(breaks = seq(min(df_edu$AÑO), max(df_edu$AÑO)))+
+     labs(title = "Evolución de la matrícula escolar y superior", x = 'Año', y = 'Número de matriculados en educación básica o superior')
+```
+#### Evolución de la matricula escolar y superior por etapa educativa
+```{r message=FALSE, warning=FALSE}
+df_edu_mod |> 
+  count(AÑO,Etapa, wt=FACTOR07) |>
+  ggplot()+
+  aes(x = AÑO, y=n, color = Etapa) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(min(df_edu$AÑO), max(df_edu$AÑO)))+
+  transition_reveal(AÑO)+
+    labs(title="Evolución de la matrícula escolar y superior, por etapa educativa",
+         subtitle = "Año: {as.integer(frame_along)}",
+       X = "Año", y = 'Número de matriculados en educación básica o superior')
+```
+
+#### Evolución de la matricula escolar y superior en el ámbito rural
+
+```{r message=FALSE, warning=FALSE}
+df_edu_mod |> 
+    filter(Area=="Rural") |> 
+    count(AÑO,Etapa, wt=FACTOR07) |>
+    ggplot()+
+    aes(x = AÑO, y=n, color = Etapa) +
+    geom_line() +
+    scale_x_continuous(breaks = seq(min(df_edu$AÑO), max(df_edu$AÑO)))+
+    transition_reveal(AÑO)+
+    labs(title="Evolución de la matrícula en el ámbito rural",
+         subtitle = "Año: {as.integer(frame_along)}",
+          X = "Año", y = 'Número de matriculados en educación básica o superior')
+```
+
+#### Evolución de la matricula escolar y superior en el ámbito urbano
+
+```{r message=FALSE, warning=FALSE}
+df_edu_mod |> 
+    filter(Area=="Urbano") |> 
+    count(AÑO,Etapa, wt=FACTOR07) |>
+    ggplot()+
+    aes(x = AÑO, y=n, color = Etapa) +
+    geom_line() +
+    scale_x_continuous(breaks = seq(min(df_edu$AÑO), max(df_edu$AÑO)))+
+    transition_reveal(AÑO)+
+    labs(title="Evolución de la matrícula en el ámbito urbano",
+         subtitle = "Año: {as.integer(frame_along)}",
+          X = "Año", y = 'Número de matriculados en educación básica o superior')
+```
+
+#### Evolución de la matricula escolar y superior del hombre rural
+
+```{r message=FALSE, warning=FALSE}
+df_edu_mod |> 
+    filter(Sexo=="Hombre" & Area=="Rural") |> 
+    count(AÑO,Etapa, wt=FACTOR07) |>
+    ggplot()+
+    aes(x = AÑO, y=n, color = Etapa) +
+    geom_line() +
+    scale_x_continuous(breaks = seq(min(df_edu$AÑO), max(df_edu$AÑO)))+
+    transition_reveal(AÑO)+
+    labs(title="Evolución de la matrícula escolar y superior del hombre rural",
+         subtitle = "Año: {as.integer(frame_along)}",
+          X = "Año", y = 'Número de matriculados en educación básica o superior')
+```
+
+#### Evolución de la matricula escolar y superior de la mujer rural
+
+```{r message=FALSE, warning=FALSE}
+df_edu_mod |> 
+    filter(Sexo=="Mujer" & Area=="Rural") |> 
+    count(AÑO,Etapa, wt=FACTOR07) |>
+    ggplot()+
+    aes(x = AÑO, y=n, color = Etapa) +
+    geom_line() +
+    scale_x_continuous(breaks = seq(min(df_edu$AÑO), max(df_edu$AÑO)))+
+    transition_reveal(AÑO)+
+    labs(title="Evolución de la matrícula escolar y superior de la mujer rural",
+         subtitle = "Año: {as.integer(frame_along)}",
+          X = "Año", y = 'Número de matriculados en educación básica o superior')
+```
+La caída pronunciada en la matrícula después de pandemia en la etapa primaria y secundaria puede traer efectos negativos para esta población lo que podría entraparla en un círculo de pobreza del cual es muy dificil salir. Por tanto, es necesario que se tengan en cuenta políticas que permitan apaliar este problema, en especial para las mujeres rurales.
+
+Además, la evolución en la matricula para los niveles inicial y superior, en el ámbito rural, ha permanecido flat durante todoe l periodo evaluado. En ese sentido, es importante implementar politicas en este aspecto que permitan incrementar de manera sostenida las matriculas en estos niveles dado que son fundamentales para el desarrollo social y profesional de dichos ciudadanos.
+
+### 4.3. Descripción de nivel de ingresos
+Como parte del cálculo del nivel de ingresos en los años 2020 y 2021, realizaremos el cálculo de los ingresos totales respectivos de la data *Ingresos_2020_2021* generada con las variables descritas en la *Sección 2.2* para la sumaria. Para el presente análisis, además de la suma por tipo de ingreso (primario y secundario), tendremos que dividir el valor entre 12, para encontrar el nivel de ingresos mensuales de la PEA ocupada.
+
+```{r message=FALSE, warning=FALSE}
+#PROCESAMIENTO DE INFORMACIÓN PARA HACER EL ANÁLISIS:
+
+#Trabajamos la información a nivel de ingresos totales por persona y los regresamos a mensuales:
+Ingresos_2020_2021$Ingreso_anual <- rowSums(Ingresos_2020_2021[, c("INGNETHD", "INGINDHD", "INSEDLHD", "INGSEIHD")], na.rm = TRUE) #Ingreso total anual
+Ingresos_2020_2021$Ingreso_mensual <- Ingresos_2020_2021$Ingreso_anual/12
+
+#Trabajamos la información de ingresos dependientes:
+Ingresos_2020_2021$Ing_dep_anual <- rowSums(Ingresos_2020_2021[, c("INGNETHD", "INSEDLHD")], na.rm = TRUE) #Ingreso dependiente anual
+Ingresos_2020_2021$Ing_dep_mensual <- Ingresos_2020_2021$Ing_dep_anual/12
+
+#Trabajamos la información a nivel de ingresos independientes por persona y los regresamos a mensuales:
+Ingresos_2020_2021$Ing_indep_anual <- rowSums(Ingresos_2020_2021[, c("INGINDHD",  "INGSEIHD")], na.rm = TRUE) #Ingreso total anual
+Ingresos_2020_2021$Ing_indep_mens <- Ingresos_2020_2021$Ing_indep_anual/12
+```
+
+Como parte del objetivo del análisis, requeriremos no solo obtener los ingresos a nivel de personas, sino poder caracterizar estos a nivel departamental y nacional, para lo cual procederemos a calcular la media de los ingresos por Departmento, para poder comparar la situación de ambos años.
+
+```{r message=FALSE, warning=FALSE}
+#Finalmente creamos la base de datos donde tenemos los ingresos y tipos de ingresos promedios
+promedio_ingresos <- Ingresos_2020_2021 |>
+  group_by(Departamento, AÑO) |>
+  summarise(Ingreso_mensual = mean(Ingreso_mensual, na.rm = TRUE),
+            Ing_dep_mensual = mean(Ing_dep_mensual, na.rm = TRUE),
+            Ing_indep_mens = mean(Ing_indep_mens, na.rm = TRUE))
+```
+
+#### Nivel de ingresos mensual a nivel nacional
+Como se observa en el cuadro  y gráfico a continuación, tal y como era de esperarse, los ingresos obtenidos en el año 2020, son más bajos que los del año 2021, siendo la diferencia 264,17 soles, entre ambos ingresos mensuales.
+```{r message=FALSE, warning=FALSE}
+#Generamos un reporte del nivel de ingresos a nivel de departamentos
+Ingreso_nacional <- promedio_ingresos |>
+  group_by(AÑO) |>
+  summarise(Ingreso_nacional = mean(Ingreso_mensual, na.rm = TRUE))
+
+Ingreso_nacional$Ingreso_nacional <- round(Ingreso_nacional$Ingreso_nacional, 2)
+Ingreso_nacional
+```
+
+```{r message=FALSE, warning=FALSE}
+#Generamos un reporte del nivel de ingresos a nivel de departamentos
+Ingreso_nacional |>
+  ggplot() +
+  aes(x = AÑO, y = factor(Ingreso_nacional)) +
+  geom_bar(stat = "identity", fill = "skyblue", width = 0.7) +
+  labs(x = "Año", y = "Ingreso Nacional", title = "Gráfico de Barras: Ingreso nacional por año") +
+  theme_minimal()
+```
+
+
+#### Ingresos por departamento al año
+
+Por parte de los ingresos por año a nivel de departamentos, se observa que la variación porcentual más alta fue la del departamento de la libertad, que respecto al 2020 creció en 47,62%. Mientras que, el departamento con menores ingresos a nivel del año 2020 y 2021, es Huancavelica con S/582,03	y S/817.34, respectivamente.
+
+```{r message=FALSE, warning=FALSE}
+#Generamos un reporte del nivel de ingresos a nivel de departamentos
+Ing_dep <- promedio_ingresos %>% select(-Ing_dep_mensual, -Ing_indep_mens)
+Ing_dep |>
+  pivot_wider(names_from = AÑO, values_from = Ingreso_mensual, names_prefix = "Ingreso_") |>
+  mutate(Variación = (((Ingreso_2021-Ingreso_2020)/Ingreso_2020)*100)) |>
+  arrange(desc(Variación))
+```
+Como se observa en el gráfico a continuación, respecto al año 2020, los ingresos de la población (PEA ocupada) han crecido considerablemente, evidenciando una mejora, respecto a la etapa del COVID-19. 
+
+```{r message=FALSE, warning=FALSE}
+#Finalmente creamos la base de datos donde tenemos los ingresos y tipos de ingresos promedios
+promedio_ingresos |>
+  ggplot() +
+  aes(x = Ingreso_mensual, y = Departamento) +
+  geom_bar(aes(fill = factor(AÑO)), stat = "identity", position = "dodge", width = 0.7) +
+  labs(x = "Ingreso Mensual", y = "Departamento", title = "Ingreso mensual por departamento") +
+  scale_fill_discrete(name = "AÑO", labels = c("2020", "2021"), breaks = c(2020, 2021)) +
+  theme_minimal()
+```
+
+## 5. Conclusiones (Retos para el país)
+- A nivel de salud: Es importante resaltar que, a nivel de indicadores de salud en el Perú todavía se presentan brechas importantes para que la población en general pueda acceder sin problemas a servicios de salud, los cuales deberían estar disponibles para todos o la mayoría de peruanos.
+
+- A nivel eduación: La caída pronunciada en la matrícula después de pandemia en la etapa primaria y secundaria puede traer efectos negativos para esta población lo que podría entraparla en un círculo de pobreza. Además, es importante implementar politicas en este aspecto que permitan incrementar de manera sostenida las matriculas en estos niveles dado que son fundamentales para el desarrollo social y profesional de dichos ciudadanos.
+
+- A nivel de ingresos: Como consecuencia de la pandemia de la COVID-19, los ingresos a nivel nacional tuvieron registros por debajo de lo que el país venía experimentando en años previos, esto producto de la pérdida de empleo y fallecimiento de muchos peruanos. Sin embargo, tras la vacunación gradual de la población y la reactivación económica de empleos, para el año 2021 los salarios se fueron recuperando y logró a nivel de todos los departamentes presentar variaciones porcentuales positivas.
